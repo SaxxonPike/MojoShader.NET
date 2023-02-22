@@ -56,4 +56,6 @@ public static class MojoShaderConstants
     /// Preshader magic value FXLC_ID.
     /// </summary>
     public const int FxlcId = 0x434C5846;
+
+    public const int PreshaderVersionMagic = 0x46580000;
 }

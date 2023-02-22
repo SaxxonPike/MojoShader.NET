@@ -1,5 +1,4 @@
 using System.Buffers.Binary;
-using MojoShaderDotNet.ShaderModel;
 using MojoShaderDotNet.Types;
 
 namespace MojoShaderDotNet.Profiles.Bytecode;
@@ -9,15 +8,14 @@ namespace MojoShaderDotNet.Profiles.Bytecode;
 /// </summary>
 public class MojoShaderBytecodeProfile : MojoShaderProfile
 {
-    public override string Name => MojoShaderProfiles.ByteCode;
+    public override string Name => 
+        MojoShaderProfiles.ByteCode;
 
     public override IMojoShaderContext CreateContext() =>
         new MojoShaderContext();
 
-    public override void EmitStart(IMojoShaderContext ctx, string profileStr)
-    {
+    public override void EmitStart(IMojoShaderContext ctx, string profileStr) => 
         ctx.IgnoresCtab = true;
-    }
 
     public override void EmitFinalize(IMojoShaderContext ctx)
     {

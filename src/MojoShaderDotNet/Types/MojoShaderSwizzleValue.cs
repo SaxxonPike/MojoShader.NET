@@ -39,7 +39,7 @@ public struct MojoShaderSwizzleValue
     /// [no_swizzle; mojoshader_profile_common.c]
     /// </summary>
     public bool IsNone =>
-        RawValue == 0b11_10_01_00;
+        RawValue == NoSwizzle;
 
     /// <summary>
     /// elements 1|2 match 3|4 and element 1 matches element 2.

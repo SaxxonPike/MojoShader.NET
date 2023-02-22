@@ -15,6 +15,5 @@ public enum MojoShaderSourceMod
     Dw,
     Abs,
     AbsNegate,
-    Not,
-    Total
+    Not
 }

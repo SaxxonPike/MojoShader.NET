@@ -2,8 +2,12 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Text;
-using MojoShaderDotNet.ShaderModel;
 using MojoShaderDotNet.Types;
+
+// ReSharper disable IdentifierTypo
+// ReSharper disable StringLiteralTypo
+// ReSharper disable MemberCanBePrivate.Global
+// ReSharper disable CommentTypo
 
 namespace MojoShaderDotNet.Profiles.Glsl;
 
@@ -169,10 +173,10 @@ public class MojoShaderGlslProfile : MojoShaderProfile
         if (!scalar && !arg.WriteMask.IsXyzw)
         {
             writeMaskStr.Append('.');
-            if (arg.WriteMask0) writeMaskStr.Append('x');
-            if (arg.WriteMask1) writeMaskStr.Append('y');
-            if (arg.WriteMask2) writeMaskStr.Append('z');
-            if (arg.WriteMask3) writeMaskStr.Append('w');
+            if (arg.WriteMask[0]) writeMaskStr.Append('x');
+            if (arg.WriteMask[1]) writeMaskStr.Append('y');
+            if (arg.WriteMask[2]) writeMaskStr.Append('z');
+            if (arg.WriteMask[3]) writeMaskStr.Append('w');
         }
 
         var leftParen = needParens ? "(" : "";
@@ -922,10 +926,12 @@ public class MojoShaderGlslProfile : MojoShaderProfile
                         if (supportGlslEs)
                             break; // GLSL ES does not have gl_FrontColor
                         indexStr = string.Empty; // no explicit number.
-                        if (index == 0)
-                            usageStr = "gl_FrontColor";
-                        else if (index == 1)
-                            usageStr = "gl_FrontSecondaryColor";
+                        usageStr = index switch
+                        {
+                            0 => "gl_FrontColor",
+                            1 => "gl_FrontSecondaryColor",
+                            _ => null
+                        };
                         break;
                     case MojoShaderUsage.Fog:
                         if (supportGlslEs)

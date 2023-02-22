@@ -5,8 +5,12 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json.Serialization;
 using MojoShaderDotNet.Profiles.SpirV;
-using MojoShaderDotNet.ShaderModel;
 using MojoShaderDotNet.Types;
+
+// ReSharper disable IdentifierTypo
+// ReSharper disable StringLiteralTypo
+// ReSharper disable MemberCanBePrivate.Global
+// ReSharper disable CommentTypo
 
 namespace MojoShaderDotNet.Profiles;
 
@@ -1601,10 +1605,10 @@ public class MojoShaderContext : IMojoShaderContext
         Span<int> tokens,
         int tokCount)
     {
-        const int prsiId = 0x49535250; // 0x49535250 == 'PRSI'
-        const int clitId = 0x54494C43; // 0x54494C43 == 'CLIT'
-        const int fxlcId = 0x434C5846; // 0x434C5846 == 'FXLC'
-        const int cTabId = 0x42415443;
+        const int prsiId = MojoShaderConstants.PrsiId; // 0x49535250 == 'PRSI'
+        const int clitId = MojoShaderConstants.ClitId; // 0x54494C43 == 'CLIT'
+        const int fxlcId = MojoShaderConstants.FxlcId; // 0x434C5846 == 'FXLC'
+        const int cTabId = MojoShaderConstants.CTabId;
 
         Debug.Assert(!HavePreshader);
         HavePreshader = true;
@@ -1614,7 +1618,7 @@ public class MojoShaderContext : IMojoShaderContext
         // !!! FIXME:  nothing else.
         // !!! FIXME: 0x02 0x0? is probably the version (fx_2_?),
         // !!! FIXME:  and 0x4658 is the magic, like a real shader's version token.
-        const int versionMagic = 0x46580000;
+        const int versionMagic = MojoShaderConstants.PreshaderVersionMagic;
         const int minVersion = 0x00000200 | versionMagic;
         const int maxVersion = 0x00000201 | versionMagic;
         var version = tokens[0];
@@ -1622,9 +1626,8 @@ public class MojoShaderContext : IMojoShaderContext
         {
             Fail("Unsupported preshader version.");
             return; // fail because the shader will malfunction w/o this.
-        } // if
-
-
+        }
+        
         tokens = tokens[1..];
         tokCount--;
 
@@ -2531,10 +2534,9 @@ public class MojoShaderContext : IMojoShaderContext
             reg.Misc = currentUsage;
         else if (reg.Misc != currentUsage)
         {
-            if (currentUsage == 1)
-                Fail("CALL to this label must be wrapped in LOOP/ENDLOOP");
-            else
-                Fail("CALL to this label must not be wrapped in LOOP/ENDLOOP");
+            Fail(currentUsage == 1
+                ? "CALL to this label must be wrapped in LOOP/ENDLOOP"
+                : "CALL to this label must not be wrapped in LOOP/ENDLOOP");
         }
     }
 
@@ -2592,8 +2594,7 @@ public class MojoShaderContext : IMojoShaderContext
                     case MojoShaderRegisterType.DepthOut:
                         if (ShaderIsVertex() && ShaderVersionAtLeast(3, 0))
                         {
-                            Fail("vs_3 can't use output registers" +
-                                 " without declaring them first.");
+                            Fail("vs_3 can't use output registers without declaring them first.");
                             return;
                         }
 
@@ -2605,7 +2606,8 @@ public class MojoShaderContext : IMojoShaderContext
                             {
                                 MojoShaderRastOutType.Position => MojoShaderUsage.Position,
                                 MojoShaderRastOutType.Fog => MojoShaderUsage.Fog,
-                                MojoShaderRastOutType.PointSize => MojoShaderUsage.PointSize
+                                MojoShaderRastOutType.PointSize => MojoShaderUsage.PointSize,
+                                _ => MojoShaderUsage.Unknown
                             },
                             MojoShaderRegisterType.AttrOut or MojoShaderRegisterType.ColorOut => MojoShaderUsage.Color,
                             MojoShaderRegisterType.TexCrdOut => MojoShaderUsage.TexCoord,
@@ -2789,14 +2791,14 @@ public class MojoShaderContext : IMojoShaderContext
             _ => (Action)StateNone
         })();
 
-    private  void StateNone()
+    private void StateNone()
     {
     }
 
     /// <summary>
     /// [state_DEF; mojoshader.c]
     /// </summary>
-    public  void StateDef()
+    public void StateDef()
     {
         var regType = DestArg?.RegType ?? MojoShaderRegisterType.Invalid;
         var regNum = DestArg?.RegNum ?? 0;
@@ -2816,6 +2818,7 @@ public class MojoShaderContext : IMojoShaderContext
             };
 
             Dwords.CopyTo(item.Value.AsSpan());
+            Constants.Add(item);
             SetDefinedRegister(regType, regNum);
         }
     }
@@ -2823,7 +2826,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_DEFI; mojoshader.c]
     /// </summary>
-    public  void StateDefI()
+    public void StateDefI()
     {
         var regType = DestArg?.RegType ?? MojoShaderRegisterType.Invalid;
         var regNum = DestArg?.RegNum ?? 0;
@@ -2843,6 +2846,7 @@ public class MojoShaderContext : IMojoShaderContext
             };
 
             Dwords.CopyTo(item.Value.AsSpan());
+            Constants.Add(item);
             SetDefinedRegister(regType, regNum);
         }
     }
@@ -2850,7 +2854,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_DEFB; mojoshader.c]
     /// </summary>
-    public  void StateDefB()
+    public void StateDefB()
     {
         var regType = DestArg?.RegType ?? MojoShaderRegisterType.Invalid;
         var regNum = DestArg?.RegNum ?? 0;
@@ -2873,6 +2877,7 @@ public class MojoShaderContext : IMojoShaderContext
                 }
             };
 
+            Constants.Add(item);
             SetDefinedRegister(regType, regNum);
         }
     }
@@ -2880,7 +2885,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_DCL; mojoshader.c]
     /// </summary>
-    public  void StateDcl()
+    public void StateDcl()
     {
         var arg = DestArg;
         var regType = arg?.RegType ?? MojoShaderRegisterType.Invalid;
@@ -2926,7 +2931,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_TEXCRD; mojoshader.c]
     /// </summary>
-    public  void StateTexCrd()
+    public void StateTexCrd()
     {
         if (ShaderVersionAtLeast(2, 0))
             Fail("TEXCRD in Shader Model >= 2.0"); // apparently removed.
@@ -2935,7 +2940,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_FRC; mojoshader.c]
     /// </summary>
-    public  void StateFrc()
+    public void StateFrc()
     {
         var dst = DestArg ?? new MojoShaderDestArgInfo();
 
@@ -2952,7 +2957,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_M4X4; mojoshader.c]
     /// </summary>
-    public  void StateM4X4()
+    public void StateM4X4()
     {
         var info = DestArg ?? new MojoShaderDestArgInfo();
         if (!info.WriteMask.IsXyzw)
@@ -2969,7 +2974,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_M4X3; mojoshader.c]
     /// </summary>
-    public  void StateM4X3()
+    public void StateM4X3()
     {
         var info = DestArg ?? new MojoShaderDestArgInfo();
         if (!info.WriteMask.IsXyz)
@@ -2983,7 +2988,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_M3X4; mojoshader.c]
     /// </summary>
-    public  void StateM3X4()
+    public void StateM3X4()
     {
         var info = DestArg ?? new MojoShaderDestArgInfo();
         if (!info.WriteMask.IsXyzw)
@@ -2997,7 +3002,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_M3X3; mojoshader.c]
     /// </summary>
-    public  void StateM3X3()
+    public void StateM3X3()
     {
         var info = DestArg ?? new MojoShaderDestArgInfo();
         if (!info.WriteMask.IsXyz)
@@ -3011,7 +3016,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_M3X3; mojoshader.c]
     /// </summary>
-    public  void StateM3X2()
+    public void StateM3X2()
     {
         var info = DestArg ?? new MojoShaderDestArgInfo();
         if (!info.WriteMask.IsXy)
@@ -3025,7 +3030,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_RET; mojoshader.c]
     /// </summary>
-    public  void StateRet()
+    public void StateRet()
     {
         // MSDN all but says that assembly shaders are more or less serialized
         //  HLSL functions, and a RET means you're at the end of one, unlike how
@@ -3043,7 +3048,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_LABEL; mojoshader.c]
     /// </summary>
-    public  void StateLabel()
+    public void StateLabel()
     {
         if (PreviousOpcode != MojoShaderOpcode.Ret)
             Fail("LABEL not followed by a RET");
@@ -3054,7 +3059,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_CALL; mojoshader.c]
     /// </summary>
-    public  void StateCall()
+    public void StateCall()
     {
         CheckLabelRegister(0, "CALL");
         CheckCallLoopWrappage(SourceArgs[0]?.RegNum ?? 0);
@@ -3063,7 +3068,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_CALLNZ; mojoshader.c]
     /// </summary>
-    public  void StateCallNz()
+    public void StateCallNz()
     {
         var regType = SourceArgs[1]?.RegType ?? MojoShaderRegisterType.Invalid;
         if (regType != MojoShaderRegisterType.ConstBool && regType != MojoShaderRegisterType.Predicate)
@@ -3075,7 +3080,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_MOVA; mojoshader.c]
     /// </summary>
-    public  void StateMovA()
+    public void StateMovA()
     {
         if (DestArg?.RegType != MojoShaderRegisterType.Address)
             Fail("MOVA argument isn't address register");
@@ -3084,7 +3089,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_RCP; mojoshader.c]
     /// </summary>
-    public  void StateRcp()
+    public void StateRcp()
     {
         if (!(SourceArgs[0]?.Swizzle.IsReplicate ?? false))
             Fail("RCP without replicate swizzle");
@@ -3093,7 +3098,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_RSQ; mojoshader.c]
     /// </summary>
-    public  void StateRsq()
+    public void StateRsq()
     {
         if (!(SourceArgs[0]?.Swizzle.IsReplicate ?? false))
             Fail("RSQ without replicate swizzle");
@@ -3102,7 +3107,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_LOOP; mojoshader.c]
     /// </summary>
-    public  void StateLoop()
+    public void StateLoop()
     {
         if (SourceArgs[0]?.RegType != MojoShaderRegisterType.Loop)
             Fail("LOOP argument isn't loop register");
@@ -3115,7 +3120,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_ENDLOOP; mojoshader.c]
     /// </summary>
-    public  void StateEndLoop()
+    public void StateEndLoop()
     {
         // !!! FIXME: check that we aren't straddling an IF block.
         if (Loops <= 0)
@@ -3126,7 +3131,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_BREAKP; mojoshader.c]
     /// </summary>
-    public  void StateBreakP()
+    public void StateBreakP()
     {
         var regType = SourceArgs[0]?.RegType ?? MojoShaderRegisterType.Invalid;
         if (regType != MojoShaderRegisterType.Predicate)
@@ -3140,7 +3145,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_BREAK; mojoshader.c]
     /// </summary>
-    public  void StateBreak()
+    public void StateBreak()
     {
         if (Loops == 0 && Reps == 0)
             Fail("BREAK outside LOOP/ENDLOOP or REP/ENDREP");
@@ -3149,7 +3154,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_SETP; mojoshader.c]
     /// </summary>
-    public  void StateSetP()
+    public void StateSetP()
     {
         var regType = DestArg?.RegType ?? MojoShaderRegisterType.Invalid;
         if (regType != MojoShaderRegisterType.Predicate)
@@ -3159,7 +3164,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_REP; mojoshader.c]
     /// </summary>
-    public  void StateRep()
+    public void StateRep()
     {
         var regType = SourceArgs[0]?.RegType ?? MojoShaderRegisterType.Invalid;
         if (regType != MojoShaderRegisterType.ConstInt)
@@ -3173,7 +3178,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_ENDREP; mojoshader.c]
     /// </summary>
-    public  void StateEndRep()
+    public void StateEndRep()
     {
         // !!! FIXME: check that we aren't straddling an IF block.
         if (Reps <= 0)
@@ -3184,7 +3189,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_CMP; mojoshader.c]
     /// </summary>
-    public  void StateCmp()
+    public void StateCmp()
     {
         Cmps++;
 
@@ -3215,7 +3220,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_DP4; mojoshader.c]
     /// </summary>
-    public  void StateDp4()
+    public void StateDp4()
     {
         // extra limitations for ps < 1.4 ...
         if (!ShaderVersionAtLeast(1, 4))
@@ -3225,7 +3230,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_CND; mojoshader.c]
     /// </summary>
-    public  void StateCnd()
+    public void StateCnd()
     {
         // apparently it was removed...it's not in the docs past ps_1_4 ...
         if (ShaderVersionAtLeast(2, 0))
@@ -3245,7 +3250,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_POW; mojoshader.c]
     /// </summary>
-    public  void StatePow()
+    public void StatePow()
     {
         if (!(SourceArgs[0]?.Swizzle.IsReplicate ?? false))
             Fail("POW src0 must have replicate swizzle");
@@ -3256,7 +3261,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_LOG; mojoshader.c]
     /// </summary>
-    public  void StateLog()
+    public void StateLog()
     {
         if (!(SourceArgs[0]?.Swizzle.IsReplicate ?? false))
             Fail("LOG src0 must have replicate swizzle");
@@ -3265,7 +3270,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_LOGP; mojoshader.c]
     /// </summary>
-    public  void StateLogP()
+    public void StateLogP()
     {
         if (!(SourceArgs[0]?.Swizzle.IsReplicate ?? false))
             Fail("LOGP src0 must have replicate swizzle");
@@ -3274,7 +3279,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_SINCOS; mojoshader.c]
     /// </summary>
-    public  void StateSinCos()
+    public void StateSinCos()
     {
         var dst = DestArg ?? new MojoShaderDestArgInfo();
         var mask = dst.WriteMask;
@@ -3308,7 +3313,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_IF; mojoshader.c]
     /// </summary>
-    public  void StateIf()
+    public void StateIf()
     {
         var regType = SourceArgs[0]?.RegType;
         if (regType != MojoShaderRegisterType.Predicate && regType != MojoShaderRegisterType.ConstBool)
@@ -3319,7 +3324,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_IFC; mojoshader.c]
     /// </summary>
-    public  void StateIfc()
+    public void StateIfc()
     {
         if (!(SourceArgs[0]?.Swizzle.IsReplicate ?? false))
             Fail("IFC src0 must have replicate swizzle");
@@ -3331,7 +3336,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_BREAKC; mojoshader.c]
     /// </summary>
-    public  void StateBreakC()
+    public void StateBreakC()
     {
         if (!(SourceArgs[0]?.Swizzle.IsReplicate ?? false))
             Fail("BREAKC src1 must have replicate swizzle");
@@ -3344,7 +3349,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_TEXKILL; mojoshader.c]
     /// </summary>
-    public  void StateTexKill()
+    public void StateTexKill()
     {
         // The MSDN docs say this should be a source arg, but the driver docs
         //  say it's a dest arg. That's annoying.
@@ -3363,7 +3368,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_texops; mojoshader.c]
     /// </summary>
-    public  void StateTexOps(
+    public void StateTexOps(
         string opcode,
         int dims,
         int texBem)
@@ -3400,7 +3405,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_texbem; mojoshader.c]
     /// </summary>
-    public  void StateTexBemFamily(
+    public void StateTexBemFamily(
         string opcode)
     {
         // The TEXBEM equasion, according to MSDN:
@@ -3434,19 +3439,19 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_TEXBEM; mojoshader.c]
     /// </summary>
-    public  void StateTexBem() =>
+    public void StateTexBem() =>
         StateTexBemFamily("TEXBEM");
 
     /// <summary>
     /// [state_TEXBEML; mojoshader.c]
     /// </summary>
-    public  void StateTexBemL() =>
+    public void StateTexBemL() =>
         StateTexBemFamily("TEXBEML");
 
     /// <summary>
     /// [state_TEXM3X2PAD; mojoshader.c]
     /// </summary>
-    public  void StateTexM3X2Pad()
+    public void StateTexM3X2Pad()
     {
         if (ShaderVersionAtLeast(1, 4))
             Fail("TEXM3X2PAD opcode not available after Shader Model 1.3");
@@ -3459,7 +3464,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_TEXM3X2TEX; mojoshader.c]
     /// </summary>
-    public  void StateTexM3X2Tex()
+    public void StateTexM3X2Tex()
     {
         if (ShaderVersionAtLeast(1, 4))
             Fail("TEXM3X2TEX opcode not available after Shader Model 1.3");
@@ -3480,7 +3485,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_TEXM3X3PAD; mojoshader.c]
     /// </summary>
-    public  void StateTexM3X3Pad()
+    public void StateTexM3X3Pad()
     {
         if (ShaderVersionAtLeast(1, 4))
             Fail("TEXM3X2TEX opcode not available after Shader Model 1.3");
@@ -3502,7 +3507,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// <summary>
     /// [state_texm3x3; mojoshader.c]
     /// </summary>
-    public  void StateTexM3X3Family(string opcode, int dims)
+    public void StateTexM3X3Family(string opcode, int dims)
     {
         // !!! FIXME: check for correct opcode existence and order more rigorously?
         if (ShaderVersionAtLeast(1, 4))

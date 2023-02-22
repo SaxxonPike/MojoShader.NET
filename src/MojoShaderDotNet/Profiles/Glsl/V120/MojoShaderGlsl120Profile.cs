@@ -1,4 +1,3 @@
-using MojoShaderDotNet.ShaderModel;
 using MojoShaderDotNet.Types;
 
 namespace MojoShaderDotNet.Profiles.Glsl.V120;

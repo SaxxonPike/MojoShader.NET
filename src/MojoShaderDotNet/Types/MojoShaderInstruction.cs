@@ -1,5 +1,3 @@
-using MojoShaderDotNet.Profiles;
-
 namespace MojoShaderDotNet.Types;
 
 /// <summary>

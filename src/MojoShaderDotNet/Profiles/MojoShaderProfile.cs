@@ -1,6 +1,11 @@
 using System.Buffers.Binary;
 using MojoShaderDotNet.Types;
 
+// ReSharper disable IdentifierTypo
+// ReSharper disable StringLiteralTypo
+// ReSharper disable MemberCanBePrivate.Global
+// ReSharper disable CommentTypo
+
 namespace MojoShaderDotNet.Profiles;
 
 /// <summary>
@@ -100,7 +105,7 @@ public abstract class MojoShaderProfile : IMojoShaderProfile
         ctx.TexM3X3PadSrc0 = -1;
         ctx.TexM3X3PadDst1 = -1;
         ctx.TexM3X3PadSrc1 = -1;
-        ctx.Instructions = GetInstructionTable(ctx);
+        ctx.Instructions = GetInstructionTable();
         ctx.SetOutput(MojoShaderProfileOutput.MainLine);
         return ctx;
     }
@@ -171,12 +176,23 @@ public abstract class MojoShaderProfile : IMojoShaderProfile
                 retVal = ctx.ShaderIsVertex() ? "a" : "t";
                 break;
             case MojoShaderRegisterType.RastOut:
-                retVal = (MojoShaderRastOutType)regNum switch
+                switch ((MojoShaderRastOutType)regNum)
                 {
-                    MojoShaderRastOutType.Position => "oPos",
-                    MojoShaderRastOutType.Fog => "oFog",
-                    MojoShaderRastOutType.PointSize => "oPts"
-                };
+                    case MojoShaderRastOutType.Position:
+                        retVal = "oPos";
+                        break;
+                    case MojoShaderRastOutType.Fog:
+                        retVal = "oFog";
+                        break;
+                    case MojoShaderRastOutType.PointSize:
+                        retVal = "oPts";
+                        break;
+                    default:
+                        ctx.Fail("unknown rastout type");
+                        retVal = "???";
+                        break;
+                }
+
                 hasNumber = false;
                 break;
             case MojoShaderRegisterType.AttrOut:
@@ -208,11 +224,21 @@ public abstract class MojoShaderProfile : IMojoShaderProfile
                 hasNumber = false;
                 break;
             case MojoShaderRegisterType.MiscType:
-                retVal = (MojoShaderMiscTypeType)regNum switch
+                switch ((MojoShaderMiscTypeType)regNum)
                 {
-                    MojoShaderMiscTypeType.Position => "vPos",
-                    MojoShaderMiscTypeType.Face => "vFace"
-                };
+                    case MojoShaderMiscTypeType.Position:
+                        retVal = "vPos";
+                        break;
+                    case MojoShaderMiscTypeType.Face:
+                        retVal = "vFace";
+                        break;
+                    default:
+                        ctx.Fail("unknown misc type");
+                        retVal = "???";
+                        hasNumber = false;
+                        break;
+                }
+
                 break;
             case MojoShaderRegisterType.Label:
                 retVal = "l";
@@ -251,7 +277,7 @@ public abstract class MojoShaderProfile : IMojoShaderProfile
     /// <summary>
     /// Bit of a nasty hack, but somewhat similar to how the original runs.
     /// </summary>
-    public List<MojoShaderInstruction> GetInstructionTable(IMojoShaderContext ctx)
+    public List<MojoShaderInstruction> GetInstructionTable()
     {
         MojoShaderInstruction GetInstruction(
             MojoShaderOpcode op,
@@ -259,9 +285,8 @@ public abstract class MojoShaderProfile : IMojoShaderProfile
             int slots,
             MojoShaderInstructionArgs args,
             MojoShaderShaderType type,
-            int writeMask)
-        {
-            return new MojoShaderInstruction
+            int writeMask) =>
+            new()
             {
                 Opcode = op,
                 OpcodeString = opStr,
@@ -270,7 +295,6 @@ public abstract class MojoShaderProfile : IMojoShaderProfile
                 ShaderTypes = type,
                 WriteMask = writeMask
             };
-        }
 
         // These have to be in the right order! Arrays are indexed by the value
         //  of the instruction token.

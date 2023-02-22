@@ -1,9 +1,11 @@
-using MojoShaderDotNet.Profiles;
 using MojoShaderDotNet.Types;
 
-namespace MojoShaderDotNet.ShaderModel;
+namespace MojoShaderDotNet;
 
-public static class MojoShaderParseTools
+/// <summary>
+/// Contains global methods that help simplify MojoShaderDotNet.
+/// </summary>
+internal static class MojoShaderInternalExtensions
 {
     /// <summary>
     /// [floatstr; mojoshader_profile_common.c]

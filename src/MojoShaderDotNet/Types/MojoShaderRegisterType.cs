@@ -1,5 +1,8 @@
 namespace MojoShaderDotNet.Types;
 
+// There is overlap in some values; intended.
+#pragma warning disable CA1069
+
 public enum MojoShaderRegisterType
 {
     Temp = 0,

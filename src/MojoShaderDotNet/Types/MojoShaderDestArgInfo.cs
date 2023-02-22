@@ -17,26 +17,6 @@ public class MojoShaderDestArgInfo
     public MojoShaderWriteMaskValue WriteMask { get; set; }
 
     /// <summary>
-    /// x or red
-    /// </summary>
-    public bool WriteMask0 => WriteMask[0];
-
-    /// <summary>
-    /// y or green
-    /// </summary>
-    public bool WriteMask1 => WriteMask[1];
-
-    /// <summary>
-    /// z or blue
-    /// </summary>
-    public bool WriteMask2 => WriteMask[2];
-
-    /// <summary>
-    /// w or alpha
-    /// </summary>
-    public bool WriteMask3 => WriteMask[3];
-
-    /// <summary>
     /// writemask before mojoshader tweaks it.
     /// </summary>
     public MojoShaderWriteMaskValue OrigWriteMask { get; set; }

@@ -7,5 +7,4 @@ public class MojoShaderDefine
     public string Original { get; set; }
     public List<string> Parameters { get; set; } = new();
     public int ParamCount { get; set; }
-    // public MojoShaderDefine? Next { get; set; }
 }

@@ -54,11 +54,6 @@ public interface IMojoShaderProfile
 
     string? GetVarName(IMojoShaderContext ctx, MojoShaderRegisterType regType, int regNum);
 
-    (string name, string number)? GetD3DRegisterString(
-        IMojoShaderContext ctx, MojoShaderRegisterType regType, int regNum);
-
-    string? GetD3DVarName(IMojoShaderContext ctx, MojoShaderRegisterType rt, int regNum);
-
     IMojoShaderContext? BuildContext(string mainFn, Stream input, int inputLength, 
         IEnumerable<MojoShaderSwizzle> swizzles, IEnumerable<MojoShaderSamplerMap> samplerMaps);
 }
