@@ -108,7 +108,7 @@ public class MojoShaderContext : IMojoShaderContext
     public MojoShaderPreshader? Preshader { get; set; }
     public List<MojoShaderInstruction> Instructions { get; set; } = new();
     public int ShaderSize { get; set; }
-    public TextWriter Log { get; set; }
+    public TextWriter? Log { get; set; }
 
     public bool FlipRenderTargetOption { get; set; }
     public bool DepthClippingOption { get; set; }
@@ -1176,7 +1176,7 @@ public class MojoShaderContext : IMojoShaderContext
     public int ParseInstructionToken(
     )
     {
-        Log.WriteLine(
+        Log?.WriteLine(
             "[ParseInstructionToken] tok=0x{0:X8} idx=0x{1:X4} pos=0x{2:X4}",
             Tokens[0], CurrentPosition, (int)ErrorPosition);
         var startPosition = CurrentPosition;

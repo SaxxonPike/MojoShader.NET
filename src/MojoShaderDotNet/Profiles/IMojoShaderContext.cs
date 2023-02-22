@@ -97,7 +97,7 @@ public interface IMojoShaderContext
     MojoShaderPreshader? Preshader { get; set; }
     List<MojoShaderInstruction> Instructions { get; set; }
     int ShaderSize { get; set; }
-    TextWriter Log { get; set; }
+    TextWriter? Log { get; set; }
 
     /// <summary>
     /// [MOJOSHADER_FLIP_RENDERTARGET]
