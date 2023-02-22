@@ -13,7 +13,7 @@ be an important part of game portability as a whole.
 - Bytecode
 - GLSL
   - GLES, partially
-  - GL120, partially
+  - GLSL120, partially
 
 ### Further information:
 
