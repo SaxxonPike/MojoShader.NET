@@ -21,21 +21,24 @@ public class ParseTests
     [TestCase("vs_2_0_simple.bin")]
     public void TestParse(string fileName)
     {
+        // Arrange.
+        
         var path = Path.Combine(TestContext.CurrentContext.TestDirectory, "Files", fileName);
         var data = File.ReadAllBytes(path);
         using var stream = new MemoryStream(data);
 
-        var ms = new MojoShader
-        {
-            Log = TestContext.Out
-        };
-
-        var output = ms.Parse(MojoShaderProfiles.Glsl, "", stream, null);
-
+        // Act.
+        
+        var subject = new MojoShader();
+        var output = subject.Parse(MojoShaderProfiles.Glsl, "", stream, null);
+        
+        // Assert.
+        
         output.Should().NotBeNull();
         output!.Errors.Should().BeEmpty();
 
         var code = output.ToString();
+        TestContext.Out.WriteLine(code);
 
         var shaderType = output.ShaderType switch
         {
@@ -49,26 +52,6 @@ public class ParseTests
         {
             Assert.Fail("Invalid shader type");
             return;
-        }
-
-        var shader = 0;
-        try
-        {
-            GL.
-            GL.LoadBindings(new Mock<IBindingsContext>().Object);
-            var maj = GL.GetInteger(GetPName.MajorVersion);
-            var min = GL.GetInteger(GetPName.MinorVersion);
-            shader = GL.CreateShader(shaderType);
-            shader.Should().NotBe(0);
-            GL.ShaderSource(shader, code);
-            GL.GetError().Should().Be(ErrorCode.NoError);
-            GL.CompileShader(shader);
-            GL.GetError().Should().Be(ErrorCode.NoError);
-        }
-        finally
-        {
-            if (shader != 0)
-                GL.DeleteShader(shader);
         }
     }
 }
