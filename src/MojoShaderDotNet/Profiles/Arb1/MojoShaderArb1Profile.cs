@@ -11,4 +11,12 @@ public class MojoShaderArb1Profile : MojoShaderProfile
 
     public override IMojoShaderContext CreateContext() =>
         new MojoShaderArb1Context();
+    
+    /// <summary>
+    /// [get_ARB1_register_string; mojoshader_profile_arb1.c]
+    /// </summary>
+    public (string name, string number)? GetRegisterString(IMojoShaderContext ctx, MojoShaderRegisterType regType,
+        int regNum) =>
+        // turns out these are identical at the moment.
+        GetD3DRegisterString(ctx, regType, regNum);
 }
