@@ -939,98 +939,102 @@ public class MojoShaderGlslProfile : MojoShaderProfile
             // built-ins, though, but we don't have to worry about the GL entry
             // point limitations there.
 
-            if (regType == MojoShaderRegisterType.Input)
+            switch (regType)
             {
-                ctx.PushOutput(MojoShaderProfileOutput.Globals);
-                WriteAttribute(var);
-                ctx.PopOutput();
-            }
-
-            else if (regType == MojoShaderRegisterType.Output)
-            {
-                switch (usage)
+                case MojoShaderRegisterType.Input:
                 {
-                    case MojoShaderUsage.Position:
-                        if (index == 0)
-                            usageStr = "gl_Position";
-                        break;
-                    case MojoShaderUsage.PointSize:
-                        if (index == 0)
-                            usageStr = "gl_PointSize";
-                        else
-                        {
-                            ctx.PushOutput(MojoShaderProfileOutput.Globals);
-                            WriteVarying(var, usage, index);
-                            ctx.PopOutput();
-                            return;
-                        }
-
-                        break;
-                    case MojoShaderUsage.Color:
-                        // GLSL ES does not have gl_FrontColor
-                        // GLSL 4.0+ does not have gl_FrontColor outside the compatibility profile
-                        if (supportGlslEs || supportGlsl400)
+                    ctx.PushOutput(MojoShaderProfileOutput.Globals);
+                    WriteAttribute(var);
+                    ctx.PopOutput();
+                    break;
+                }
+                case MojoShaderRegisterType.Output:
+                {
+                    switch (usage)
+                    {
+                        case MojoShaderUsage.Position:
+                            if (index == 0)
+                                usageStr = "gl_Position";
                             break;
-                        indexStr = string.Empty; // no explicit number.
-                        usageStr = index switch
-                        {
-                            0 => "gl_FrontColor",
-                            1 => "gl_FrontSecondaryColor",
-                            _ => null
-                        };
-                        break;
-                    case MojoShaderUsage.Fog:
-                        // GLSL ES does not have gl_FogFragCoord
-                        // GLSL 4.0+ does not have gl_FogFragCoord outside the compatibility profile
-                        if (supportGlslEs || supportGlsl400)
+                        case MojoShaderUsage.PointSize:
+                            if (index == 0)
+                                usageStr = "gl_PointSize";
+                            else
+                            {
+                                ctx.PushOutput(MojoShaderProfileOutput.Globals);
+                                WriteVarying(var, usage, index);
+                                ctx.PopOutput();
+                                return;
+                            }
+
                             break;
-                        if (index == 0)
-                            usageStr = "gl_FogFragCoord";
-                        else
-                        {
-                            ctx.PushOutput(MojoShaderProfileOutput.Globals);
-                            WriteVarying(var, usage, index);
-                            ctx.PopOutput();
-                            return;
-                        }
+                        case MojoShaderUsage.Color:
+                            // GLSL ES does not have gl_FrontColor
+                            // GLSL 4.0+ does not have gl_FrontColor outside the compatibility profile
+                            if (supportGlslEs || supportGlsl400)
+                                break;
+                            indexStr = string.Empty; // no explicit number.
+                            usageStr = index switch
+                            {
+                                0 => "gl_FrontColor",
+                                1 => "gl_FrontSecondaryColor",
+                                _ => null
+                            };
+                            break;
+                        case MojoShaderUsage.Fog:
+                            // GLSL ES does not have gl_FogFragCoord
+                            // GLSL 4.0+ does not have gl_FogFragCoord outside the compatibility profile
+                            if (supportGlslEs || supportGlsl400)
+                                break;
+                            if (index == 0)
+                                usageStr = "gl_FogFragCoord";
+                            else
+                            {
+                                ctx.PushOutput(MojoShaderProfileOutput.Globals);
+                                WriteVarying(var, usage, index);
+                                ctx.PopOutput();
+                                return;
+                            }
 
-                        break;
-                    case MojoShaderUsage.TexCoord:
-                        // GLSL ES does not have gl_TexCoord
-                        // GLSL 4.0+ does not have gl_TexCoord outside the compatibility profile
-                        if (supportGlslEs || supportGlsl400)
-                            break; 
-                        if (index >= 4)
-                            break; // gl_TexCoord[4+] is unreliable!
-                        indexStr = $"{index}";
-                        usageStr = "gl_TexCoord";
-                        arrayLeft = "[";
-                        arrayRight = "]";
-                        break;
+                            break;
+                        case MojoShaderUsage.TexCoord:
+                            // GLSL ES does not have gl_TexCoord
+                            // GLSL 4.0+ does not have gl_TexCoord outside the compatibility profile
+                            if (supportGlslEs || supportGlsl400)
+                                break; 
+                            if (index >= 4)
+                                break; // gl_TexCoord[4+] is unreliable!
+                            indexStr = $"{index}";
+                            usageStr = "gl_TexCoord";
+                            arrayLeft = "[";
+                            arrayRight = "]";
+                            break;
 
-                    // !!! FIXME: we need to deal with some more built-in varyings here.
+                        // !!! FIXME: we need to deal with some more built-in varyings here.
+                    }
+
+                    // !!! FIXME: the #define is a little hacky, but it means we don't
+                    // !!! FIXME:  have to track these separately if this works.
+                    ctx.PushOutput(MojoShaderProfileOutput.Globals);
+                    // no mapping to built-in var? Just make it a regular global, pray.
+                    if (usageStr == null)
+                    {
+                        WriteVarying(var, usage, index);
+                    }
+                    else
+                    {
+                        ctx.OutputLine("#define {0} {1}{2}{3}{4}", var, usageStr,
+                            arrayLeft, indexStr, arrayRight);
+                    }
+
+                    ctx.PopOutput();
+                    break;
                 }
-
-                // !!! FIXME: the #define is a little hacky, but it means we don't
-                // !!! FIXME:  have to track these separately if this works.
-                ctx.PushOutput(MojoShaderProfileOutput.Globals);
-                // no mapping to built-in var? Just make it a regular global, pray.
-                if (usageStr == null)
+                default:
                 {
-                    WriteVarying(var, usage, index);
+                    ctx.Fail("unknown vertex shader attribute register");
+                    break;
                 }
-                else
-                {
-                    ctx.OutputLine("#define {0} {1}{2}{3}{4}", var, usageStr,
-                        arrayLeft, indexStr, arrayRight);
-                }
-
-                ctx.PopOutput();
-            }
-
-            else
-            {
-                ctx.Fail("unknown vertex shader attribute register");
             }
         }
 
@@ -1044,89 +1048,95 @@ public class MojoShaderGlslProfile : MojoShaderProfile
                 return;
             }
 
-            if (regType == MojoShaderRegisterType.ColorOut)
+            switch (regType)
             {
-                if (!ctx.HaveMultiColorOutputs)
+                case MojoShaderRegisterType.ColorOut when !ctx.HaveMultiColorOutputs:
                     usageStr = "gl_FragColor"; // maybe faster?
-                else
-                {
+                    break;
+                case MojoShaderRegisterType.ColorOut:
                     indexStr = $"{regNum}";
                     usageStr = "gl_FragData";
                     arrayLeft = "[";
                     arrayRight = "]";
-                }
-            }
-
-            else if (regType == MojoShaderRegisterType.DepthOut)
-                usageStr = "gl_FragDepth";
-
-            // !!! FIXME: can you actualy have a texture register with COLOR usage?
-            else if (regType is MojoShaderRegisterType.Texture or MojoShaderRegisterType.Input)
-            {
-                if (!supportGlslEs)
+                    break;
+                case MojoShaderRegisterType.DepthOut:
+                    usageStr = "gl_FragDepth";
+                    break;
+                // !!! FIXME: can you actualy have a texture register with COLOR usage?
+                case MojoShaderRegisterType.Texture or MojoShaderRegisterType.Input:
                 {
-                    if (usage == MojoShaderUsage.TexCoord)
+                    if (!supportGlslEs)
                     {
-                        // ps_1_1 does a different hack for this attribute.
-                        //  Refer to emit_GLSL_global()'s REG_TYPE_ADDRESS code.
-                        if (!ctx.ShaderVersionAtLeast(1, 4))
-                            return;
-                        if (index < 4) // gl_TexCoord[4+] is unreliable!
+                        switch (usage)
                         {
-                            indexStr = $"{index}";
-                            usageStr = "gl_TexCoord";
-                            arrayLeft = "[";
-                            arrayRight = "]";
+                            case MojoShaderUsage.TexCoord when !ctx.ShaderVersionAtLeast(1, 4):
+                                // ps_1_1 does a different hack for this attribute.
+                                //  Refer to emit_GLSL_global()'s REG_TYPE_ADDRESS code.
+                                return;
+                            case MojoShaderUsage.TexCoord:
+                            {
+                                if (index < 4) // gl_TexCoord[4+] is unreliable!
+                                {
+                                    indexStr = $"{index}";
+                                    usageStr = "gl_TexCoord";
+                                    arrayLeft = "[";
+                                    arrayRight = "]";
+                                }
+
+                                break;
+                            }
+                            case MojoShaderUsage.Color:
+                            {
+                                indexStr = string.Empty; // no explicit number.
+                                usageStr = index switch
+                                {
+                                    0 => "gl_Color",
+                                    1 => "gl_SecondaryColor",
+                                    _ => null
+                                };
+                                // FIXME: Does this even matter when we have varyings? -flibit
+                                // else
+                                //    fail(ctx, "unsupported color index");
+                                break;
+                            }
                         }
                     }
 
-                    else if (usage == MojoShaderUsage.Color)
+                    break;
+                }
+                case MojoShaderRegisterType.MiscType:
+                {
+                    var mt = (MojoShaderMiscTypeType)regNum;
+                    switch (mt)
                     {
-                        indexStr = string.Empty; // no explicit number.
-                        if (index == 0)
-                            usageStr = "gl_Color";
-                        else if (index == 1)
-                            usageStr = "gl_SecondaryColor";
-                        // FIXME: Does this even matter when we have varyings? -flibit
-                        // else
-                        //    fail(ctx, "unsupported color index");
+                        case MojoShaderMiscTypeType.Face:
+                            ctx.PushOutput(MojoShaderProfileOutput.MainLineIntro);
+                            ctx.Indent++;
+                            ctx.OutputLine("float {0} = gl_FrontFacing ? 1.0 : -1.0;", var);
+                            ctx.PopOutput();
+                            return;
+                        case MojoShaderMiscTypeType.Position:
+                            ctx.PushOutput(MojoShaderProfileOutput.Globals);
+                            ctx.OutputLine("uniform vec2 vposFlip;");
+                            ctx.PopOutput();
+
+                            // TODO: For half-pixel offset compensation, floor() this value!
+                            ctx.PushOutput(MojoShaderProfileOutput.MainLineIntro);
+                            ctx.Indent++;
+                            ctx.OutputLine("vec4 {0} = vec4(gl_FragCoord.x, (gl_FragCoord.y * vposFlip.x) + vposFlip.y, " +
+                                           "gl_FragCoord.z, gl_FragCoord.w);", var);
+                            ctx.PopOutput();
+                            return;
+                        default:
+                            ctx.Fail("BUG: unhandled misc register");
+                            break;
                     }
+
+                    break;
                 }
-            }
-
-            else if (regType == MojoShaderRegisterType.MiscType)
-            {
-                var mt = (MojoShaderMiscTypeType)regNum;
-                if (mt == MojoShaderMiscTypeType.Face)
-                {
-                    ctx.PushOutput(MojoShaderProfileOutput.MainLineIntro);
-                    ctx.Indent++;
-                    ctx.OutputLine("float {0} = gl_FrontFacing ? 1.0 : -1.0;", var);
-                    ctx.PopOutput();
-                    return;
-                }
-
-                if (mt == MojoShaderMiscTypeType.Position)
-                {
-                    ctx.PushOutput(MojoShaderProfileOutput.Globals);
-                    ctx.OutputLine("uniform vec2 vposFlip;");
-                    ctx.PopOutput();
-
-                    // TODO: For half-pixel offset compensation, floor() this value!
-                    ctx.PushOutput(MojoShaderProfileOutput.MainLineIntro);
-                    ctx.Indent++;
-                    ctx.OutputLine("vec4 {0} = vec4(gl_FragCoord.x, (gl_FragCoord.y * vposFlip.x) + vposFlip.y, " +
-                                   "gl_FragCoord.z, gl_FragCoord.w);", var);
-                    ctx.PopOutput();
-                    return;
-                }
-
-                ctx.Fail("BUG: unhandled misc register");
-            }
-
-            else
-            {
-                ctx.Fail("unknown pixel shader attribute register");
+                default:
+                    ctx.Fail("unknown pixel shader attribute register");
+                    break;
             }
 
             ctx.PushOutput(MojoShaderProfileOutput.Globals);
