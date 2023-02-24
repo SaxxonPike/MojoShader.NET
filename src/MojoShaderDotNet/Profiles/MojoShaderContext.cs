@@ -35,28 +35,28 @@ public class MojoShaderContext : IMojoShaderContext
     public bool KnowShaderSize { get; set; }
     public List<MojoShaderSwizzle> Swizzles { get; set; } = new();
     public List<MojoShaderSamplerMap> SamplerMap { get; set; } = new();
-    public StreamWriter Output { get; set; }
-    public StreamWriter Preflight { get; set; }
-    public StreamWriter Globals { get; set; }
-    public StreamWriter Inputs { get; set; }
-    public StreamWriter Outputs { get; set; }
-    public StreamWriter Helpers { get; set; }
-    public StreamWriter Subroutines { get; set; }
-    public StreamWriter MainLineIntro { get; set; }
-    public StreamWriter MainLineArguments { get; set; }
-    public StreamWriter MainLineTop { get; set; }
-    public StreamWriter MainLine { get; set; }
-    public StreamWriter Postflight { get; set; }
-    public StreamWriter Ignore { get; set; }
+    public StreamWriter Output { get; set; } = StreamWriter.Null;
+    public StreamWriter Preflight { get; set; } = StreamWriter.Null;
+    public StreamWriter Globals { get; set; } = StreamWriter.Null;
+    public StreamWriter Inputs { get; set; } = StreamWriter.Null;
+    public StreamWriter Outputs { get; set; } = StreamWriter.Null;
+    public StreamWriter Helpers { get; set; } = StreamWriter.Null;
+    public StreamWriter Subroutines { get; set; } = StreamWriter.Null;
+    public StreamWriter MainLineIntro { get; set; } = StreamWriter.Null;
+    public StreamWriter MainLineArguments { get; set; } = StreamWriter.Null;
+    public StreamWriter MainLineTop { get; set; } = StreamWriter.Null;
+    public StreamWriter MainLine { get; set; } = StreamWriter.Null;
+    public StreamWriter Postflight { get; set; } = StreamWriter.Null;
+    public StreamWriter Ignore { get; set; } = StreamWriter.Null;
     public Stack<StreamWriter> OutputStack { get; set; } = new();
     public Stack<int> IndentStack { get; set; } = new();
     public int Indent { get; set; }
-    public string ShaderTypeStr { get; set; }
-    public string EndLine { get; set; }
-    public string MainFn { get; set; }
-    public string ProfileId { get; set; }
-    public IMojoShaderProfile Profile { get; set; }
-    public MojoShaderShaderType ShaderType { get; set; }
+    public string ShaderTypeStr { get; set; } = string.Empty;
+    public string EndLine { get; set; } = string.Empty;
+    public string MainFn { get; set; } = string.Empty;
+    public string ProfileId { get; set; } = string.Empty;
+    public IMojoShaderProfile? Profile { get; set; }
+    public MojoShaderShaderType ShaderType { get; set; } = MojoShaderShaderType.Unknown;
     public int MajorVer { get; set; }
     public int MinorVer { get; set; }
     public MojoShaderDestArgInfo? DestArg { get; set; }
@@ -66,8 +66,8 @@ public class MojoShaderContext : IMojoShaderContext
     public int VersionToken { get; set; }
     public int InstructionCount { get; set; }
     public int InstructionControls { get; set; }
-    public MojoShaderOpcode CurrentOpcode { get; set; }
-    public MojoShaderOpcode PreviousOpcode { get; set; }
+    public MojoShaderOpcode CurrentOpcode { get; set; } = MojoShaderOpcode.Reserved;
+    public MojoShaderOpcode PreviousOpcode { get; set; } = MojoShaderOpcode.Reserved;
     public bool CoIssue { get; set; }
     public int Loops { get; set; }
     public int Reps { get; set; }
@@ -135,7 +135,7 @@ public class MojoShaderContext : IMojoShaderContext
             .Where(x => x.Used)
             .Select(var =>
             {
-                var name = Profile.GetConstArrayVarName(this, var.Index, var.Count);
+                var name = Profile?.GetConstArrayVarName(this, var.Index, var.Count);
                 if (name != null)
                 {
                     return new MojoShaderUniform
@@ -287,7 +287,7 @@ public class MojoShaderContext : IMojoShaderContext
         // check again, in case build_output, etc, ran out of memory.
         if (!IsFail)
         {
-            retval.Profile = Profile.Name;
+            retval.Profile = Profile?.Name;
             retval.Output = output;
             retval.InstructionCount = InstructionCount;
             retval.ShaderType = ShaderType;
@@ -1240,7 +1240,7 @@ public class MojoShaderContext : IMojoShaderContext
         InstructionCount += instruction.Slots;
 
         if (!IsFail)
-            Profile.EmitFunction(this, instruction.Opcode); // call the profile's emitter.
+            Profile?.EmitFunction(this, instruction.Opcode); // call the profile's emitter.
 
         if (ResetTexMpad)
         {
@@ -1318,7 +1318,7 @@ public class MojoShaderContext : IMojoShaderContext
             Fail("Shader Model {0}.{1} is currently unsupported.", major, minor);
 
         if (!IsFail)
-            Profile.EmitStart(this, profileStr);
+            Profile?.EmitStart(this, profileStr);
 
         return 1; // ate one token.
     }
@@ -2037,7 +2037,7 @@ public class MojoShaderContext : IMojoShaderContext
             Fail("end token before end of stream");
 
         if (!IsFail)
-            Profile.EmitEnd(this);
+            Profile?.EmitEnd(this);
 
         return 1;
     }
@@ -2056,7 +2056,7 @@ public class MojoShaderContext : IMojoShaderContext
             Fail("phase token only available in 1.4 pixel shaders");
 
         if (!IsFail)
-            Profile.EmitPhase(this);
+            Profile?.EmitPhase(this);
 
         return 1;
     }
@@ -2560,7 +2560,7 @@ public class MojoShaderContext : IMojoShaderContext
     /// [alloc_varname; mojoshader.c]
     /// </summary>
     public string? AllocVarName(MojoShaderRegister reg) =>
-        Profile.GetVarName(this, reg.RegType, reg.RegNum);
+        Profile?.GetVarName(this, reg.RegType, reg.RegNum);
 
     /// <summary>
     /// [process_definitions; mojoshader.c]
@@ -2623,7 +2623,7 @@ public class MojoShaderContext : IMojoShaderContext
                     case MojoShaderRegisterType.Temp:
                     case MojoShaderRegisterType.Loop:
                     case MojoShaderRegisterType.Label:
-                        Profile.EmitGlobal(this, regType, regNum);
+                        Profile?.EmitGlobal(this, regType, regNum);
                         break;
 
                     case MojoShaderRegisterType.Const:
@@ -2668,11 +2668,11 @@ public class MojoShaderContext : IMojoShaderContext
         {
             if (var.Constants.Count > 0)
             {
-                Profile.EmitConstArray(this, var.Constants, var.Index, var.Count);
+                Profile?.EmitConstArray(this, var.Constants, var.Index, var.Count);
             }
             else
             {
-                Profile.EmitArray(this, var);
+                Profile?.EmitArray(this, var);
                 UniformFloat4Count += var.Count;
             }
         }
@@ -2704,7 +2704,7 @@ public class MojoShaderContext : IMojoShaderContext
                 }
             }
 
-            Profile.EmitUniform(this, item.RegType, item.RegNum, var1!);
+            Profile?.EmitUniform(this, item.RegType, item.RegNum, var1!);
 
             if (arraySize < 0) // not part of an array?
             {
@@ -2725,14 +2725,12 @@ public class MojoShaderContext : IMojoShaderContext
 
         // ...and samplers...
         foreach (var item in Samplers)
-        {
-            Profile.EmitSampler(this, item.RegNum, (MojoShaderTextureType)item.Index, item.Misc != 0);
-        }
+            Profile?.EmitSampler(this, item.RegNum, (MojoShaderTextureType)item.Index, item.Misc != 0);
 
         // ...and attributes...
         foreach (var item in Attributes)
         {
-            Profile.EmitAttribute(this, item.RegType, item.RegNum, item.Usage, item.Index, item.WriteMask,
+            Profile?.EmitAttribute(this, item.RegType, item.RegNum, item.Usage, item.Index, item.WriteMask,
                 item.Misc);
         }
     }

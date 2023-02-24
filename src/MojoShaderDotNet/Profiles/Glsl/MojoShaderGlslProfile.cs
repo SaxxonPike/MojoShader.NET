@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Text;
+using MojoShaderDotNet.Profiles.Glsl.V400;
 using MojoShaderDotNet.Types;
 
 // ReSharper disable IdentifierTypo
@@ -20,6 +21,10 @@ public class MojoShaderGlslProfile : MojoShaderProfile
         new MojoShaderGlslContext();
 
     public override string Name => MojoShaderProfiles.Glsl;
+
+    public virtual string OutputName => "varying";
+
+    public virtual string InputName => "attribute";
 
     /// <summary>
     /// [macro EMIT_GLSL_OPCODE_UNIMPLEMENTED_FUNC; mojoshader_profile_glsl.c]
@@ -495,19 +500,32 @@ public class MojoShaderGlslProfile : MojoShaderProfile
             return;
 
         glCtx.GlslGeneratedTexLodSetup = true;
+
         glCtx.PushOutput(MojoShaderProfileOutput.Preflight);
-        glCtx.OutputLine("#if GL_ARB_shader_texture_lod");
-        glCtx.OutputLine("#extension GL_ARB_shader_texture_lod : enable");
-        glCtx.OutputLine("#define texture2DGrad texture2DGradARB");
-        glCtx.OutputLine("#define texture2DProjGrad texture2DProjARB");
-        glCtx.OutputLine("#elif GL_EXT_gpu_shader4");
-        glCtx.OutputLine("#extension GL_EXT_gpu_shader4 : enable");
-        glCtx.OutputLine("#else");
-        glCtx.OutputLine("#define texture2DGrad(a,b,c,d) texture2D(a,b)");
-        glCtx.OutputLine("#define texture2DProjGrad(a,b,c,d) texture2DProj(a,b)");
-        if (glCtx.ShaderIsPixel())
-            glCtx.OutputLine("#define texture2DLod(a,b,c) texture2D(a,b)");
-        glCtx.OutputLine("#endif");
+        if (glCtx.ProfileSupportsGlsl400)
+        {
+            // These functions exist in GLSL 4.0+ for both Vertex and Fragment shaders.
+            glCtx.OutputLine("#define texture2DGrad(a,b,c,d) textureGrad(a,b,c,d)");
+            glCtx.OutputLine("#define texture2DProjGrad(a,b,c,d) textureProjGrad(a,b,c,d)");
+            glCtx.OutputLine("#define texture2DLod(a,b,c) textureLod(a,b,c)");
+        }
+        else
+        {
+            // Use reduced functionality in older GLSL contexts. 
+            glCtx.OutputLine("#if GL_ARB_shader_texture_lod");
+            glCtx.OutputLine("#extension GL_ARB_shader_texture_lod : enable");
+            glCtx.OutputLine("#define texture2DGrad texture2DGradARB");
+            glCtx.OutputLine("#define texture2DProjGrad texture2DProjARB");
+            glCtx.OutputLine("#elif GL_EXT_gpu_shader4");
+            glCtx.OutputLine("#extension GL_EXT_gpu_shader4 : enable");
+            glCtx.OutputLine("#else");
+            glCtx.OutputLine("#define texture2DGrad(a,b,c,d) texture2D(a,b)");
+            glCtx.OutputLine("#define texture2DProjGrad(a,b,c,d) texture2DProj(a,b)");
+            if (glCtx.ShaderIsPixel())
+                glCtx.OutputLine("#define texture2DLod(a,b,c) texture2D(a,b)");
+            glCtx.OutputLine("#endif");
+        }
+
         glCtx.OutputBlankLine();
         glCtx.PopOutput();
     }
@@ -829,6 +847,7 @@ public class MojoShaderGlslProfile : MojoShaderProfile
         int wMask, int flags)
     {
         var supportGlslEs = ctx is MojoShaderGlslContext { ProfileSupportsGlslEs: true };
+        var supportGlsl400 = ctx is MojoShaderGlslContext { ProfileSupportsGlsl400: true };
 
         // !!! FIXME: this function doesn't deal with write masks at all yet!
         string? usageStr = null;
@@ -881,7 +900,36 @@ public class MojoShaderGlslProfile : MojoShaderProfile
                     index = regNum;
                 }
             }
+            
+            // Some templates for writing input and output definitions..
 
+            void WriteVarying(string? v, MojoShaderUsage u, int i)
+            {
+                if (supportGlsl400)
+                {
+                    // "same as _out_ when in a vertex shader and same as _in_ when in a fragment shader"
+                    var direction = ctx.ShaderType switch
+                    {
+                        MojoShaderShaderType.Vertex => "out",
+                        _ => "in"
+                    };
+                    ctx.OutputLine("{2} io_{0}_{1};", u, i, direction);
+                }
+                else if (supportGlslEs)
+                    ctx.OutputLine("varying highp float io_{0}_{1};", (int) u, i);
+                else
+                    ctx.OutputLine("varying float io_{0}_{1};", (int) u, i);
+                ctx.OutputLine("#define {0} io_{1}_{2}", v, u, i);
+            }
+
+            void WriteAttribute(string? v)
+            {
+                if (supportGlsl400)
+                    ctx.OutputLine("in vec4 {0};", v);
+                else
+                    ctx.OutputLine("attribute vec4 {0};", v);
+            }
+            
             // to avoid limitations of various GL entry points for input
             // attributes (glSecondaryColorPointer() can only take 3 component
             // items, glVertexPointer() can't do GL_UNSIGNED_BYTE, many other
@@ -894,7 +942,7 @@ public class MojoShaderGlslProfile : MojoShaderProfile
             if (regType == MojoShaderRegisterType.Input)
             {
                 ctx.PushOutput(MojoShaderProfileOutput.Globals);
-                ctx.OutputLine("attribute vec4 {0};", var);
+                WriteAttribute(var);
                 ctx.PopOutput();
             }
 
@@ -912,19 +960,17 @@ public class MojoShaderGlslProfile : MojoShaderProfile
                         else
                         {
                             ctx.PushOutput(MojoShaderProfileOutput.Globals);
-                            if (supportGlslEs)
-                                ctx.OutputLine("varying highp float io_{0}_{1};", usage, index);
-                            else
-                                ctx.OutputLine("varying float io_{0}_{1};", usage, index);
-                            ctx.OutputLine("#define {0} io_{1}_{2}", var, usage, index);
+                            WriteVarying(var, usage, index);
                             ctx.PopOutput();
                             return;
                         }
 
                         break;
                     case MojoShaderUsage.Color:
-                        if (supportGlslEs)
-                            break; // GLSL ES does not have gl_FrontColor
+                        // GLSL ES does not have gl_FrontColor
+                        // GLSL 4.0+ does not have gl_FrontColor outside the compatibility profile
+                        if (supportGlslEs || supportGlsl400)
+                            break;
                         indexStr = string.Empty; // no explicit number.
                         usageStr = index switch
                         {
@@ -934,26 +980,26 @@ public class MojoShaderGlslProfile : MojoShaderProfile
                         };
                         break;
                     case MojoShaderUsage.Fog:
-                        if (supportGlslEs)
-                            break; // GLSL ES does not have gl_FogFragCoord
+                        // GLSL ES does not have gl_FogFragCoord
+                        // GLSL 4.0+ does not have gl_FogFragCoord outside the compatibility profile
+                        if (supportGlslEs || supportGlsl400)
+                            break;
                         if (index == 0)
                             usageStr = "gl_FogFragCoord";
                         else
                         {
                             ctx.PushOutput(MojoShaderProfileOutput.Globals);
-                            if (supportGlslEs)
-                                ctx.OutputLine("varying highp float io_{0}_{1};", usage, index);
-                            else
-                                ctx.OutputLine("varying float io_{0}_{1};", usage, index);
-                            ctx.OutputLine("#define {0} io_{1}_{2}", var, usage, index);
+                            WriteVarying(var, usage, index);
                             ctx.PopOutput();
                             return;
                         }
 
                         break;
                     case MojoShaderUsage.TexCoord:
-                        if (supportGlslEs)
-                            break; // GLSL ES does not have gl_TexCoord
+                        // GLSL ES does not have gl_TexCoord
+                        // GLSL 4.0+ does not have gl_TexCoord outside the compatibility profile
+                        if (supportGlslEs || supportGlsl400)
+                            break; 
                         if (index >= 4)
                             break; // gl_TexCoord[4+] is unreliable!
                         indexStr = $"{index}";
@@ -971,11 +1017,7 @@ public class MojoShaderGlslProfile : MojoShaderProfile
                 // no mapping to built-in var? Just make it a regular global, pray.
                 if (usageStr == null)
                 {
-                    if (supportGlslEs)
-                        ctx.OutputLine("varying highp vec4 io_{0}_{1};", usage, index);
-                    else
-                        ctx.OutputLine("varying vec4 io_{0}_{1};", usage, index);
-                    ctx.OutputLine("#define {0} io_{1}_{2}", var, usage, index);
+                    WriteVarying(var, usage, index);
                 }
                 else
                 {
@@ -998,7 +1040,7 @@ public class MojoShaderGlslProfile : MojoShaderProfile
 
             if ((flags & (int)MojoShaderMod.Centroid) != 0) // !!! FIXME
             {
-                ctx.Fail("centroid unsupported in {0} profile", ctx.Profile.Name);
+                ctx.Fail("centroid unsupported in {0} profile", ctx.Profile?.Name);
                 return;
             }
 

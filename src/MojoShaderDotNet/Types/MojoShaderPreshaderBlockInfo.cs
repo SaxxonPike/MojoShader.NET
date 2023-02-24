@@ -8,7 +8,7 @@ namespace MojoShaderDotNet.Types;
 public class MojoShaderPreshaderBlockInfo
 {
     public int TokenOffset { get; set; }
-    public int[] RawTokens { get; set; }
+    public int[] RawTokens { get; set; } = Array.Empty<int>();
     [JsonIgnore]
     public Span<int> Tokens => RawTokens.AsSpan(TokenOffset..);
     public bool Seen { get; set; }

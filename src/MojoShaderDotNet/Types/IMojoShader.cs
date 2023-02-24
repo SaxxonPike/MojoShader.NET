@@ -109,5 +109,5 @@ public interface IMojoShader
     /// </summary>
     public void SpirvLinkAttributes(MojoShaderParseData vertex, MojoShaderParseData pixel);
     
-    public TextWriter Log { get; set; }
+    public TextWriter? Log { get; set; }
 }

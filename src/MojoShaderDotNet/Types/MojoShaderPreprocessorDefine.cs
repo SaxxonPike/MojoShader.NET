@@ -7,6 +7,6 @@ namespace MojoShaderDotNet.Types;
 /// </summary>
 public class MojoShaderPreprocessorDefine
 {
-    public string Identifier { get; set; }
-    public string Definition { get; set; }
+    public string Identifier { get; set; } = string.Empty;
+    public string Definition { get; set; } = string.Empty;
 }

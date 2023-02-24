@@ -41,7 +41,7 @@ public interface IMojoShaderContext
     string EndLine { get; set; }
     string MainFn { get; set; }
     string ProfileId { get; set; }
-    IMojoShaderProfile Profile { get; set; }
+    IMojoShaderProfile? Profile { get; set; }
     MojoShaderShaderType ShaderType { get; set; }
     int MajorVer { get; set; }
     int MinorVer { get; set; }

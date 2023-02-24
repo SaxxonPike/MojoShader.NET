@@ -25,7 +25,7 @@ public class MojoShaderGlslProfileTests
         // Act.
         
         var subject = new MojoShader();
-        var result = subject.Parse(MojoShaderProfiles.Glsl, stream)!;
+        var result = subject.Parse(MojoShaderProfiles.Glsl400, stream)!;
         
         // Assert.
         

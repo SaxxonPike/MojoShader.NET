@@ -8,6 +8,7 @@ using MojoShaderDotNet.Profiles.D3D;
 using MojoShaderDotNet.Profiles.Glsl;
 using MojoShaderDotNet.Profiles.Glsl.Es;
 using MojoShaderDotNet.Profiles.Glsl.V120;
+using MojoShaderDotNet.Profiles.Glsl.V400;
 using MojoShaderDotNet.Profiles.Hlsl;
 using MojoShaderDotNet.Profiles.Metal;
 using MojoShaderDotNet.Profiles.SpirV;
@@ -44,6 +45,11 @@ public static class MojoShaderProfiles
     /// Profile string for GLSL 1.20: minor improvements to base GLSL spec.
     /// </summary>
     public const string Glsl120 = "glsl120";
+
+    /// <summary>
+    /// Profile string for GLSL 4.00: major changes to base GLSL spec.
+    /// </summary>
+    public const string Glsl400 = "glsl400";
 
     /// <summary>
     /// Profile string for GLSL ES: minor changes to GLSL output for ES compliance.
@@ -88,24 +94,25 @@ public static class MojoShaderProfiles
     /// </summary>
     public const string GlSpirV = "glspirv";
 
-    public static IReadOnlyDictionary<string, (Type ProfileType, Type ContextType)> All { get; }
-        = new Dictionary<string, (Type, Type)>
+    public static IReadOnlyDictionary<string, Type> All { get; }
+        = new Dictionary<string, Type>
         {
-            { D3D, (typeof(MojoShaderD3dProfile), typeof(MojoShaderContext)) },
-            { ByteCode, (typeof(MojoShaderBytecodeProfile), typeof(MojoShaderContext)) },
-            { Hlsl, (typeof(MojoShaderHlslProfile), typeof(MojoShaderHlslContext)) },
-            { Glsl, (typeof(MojoShaderGlslProfile), typeof(MojoShaderGlslContext)) },
-            { Glsl120, (typeof(MojoShaderGlslProfile), typeof(MojoShaderGlsl120Context)) },
-            { GlslEs, (typeof(MojoShaderGlslProfile), typeof(MojoShaderGlslEsContext)) },
-            { Arb1, (typeof(MojoShaderArb1Profile), typeof(MojoShaderArb1Context)) },
-            { Nv2, (typeof(MojoShaderArb1Profile), typeof(MojoShaderArb1Nv2Context)) },
-            { Nv3, (typeof(MojoShaderArb1Profile), typeof(MojoShaderArb1Nv3Context)) },
-            { Nv4, (typeof(MojoShaderArb1Profile), typeof(MojoShaderArb1Nv4Context)) },
-            { Metal, (typeof(MojoShaderMetalProfile), typeof(MojoShaderMetalContext)) },
-            { SpirV, (typeof(MojoShaderSpirVProfile), typeof(MojoShaderSpirVContext)) },
-            { GlSpirV, (typeof(MojoShaderSpirVProfile), typeof(MojoShaderGlSpirVContext)) }
+            { D3D, typeof(MojoShaderD3dProfile) },
+            { ByteCode, typeof(MojoShaderBytecodeProfile) },
+            { Hlsl, typeof(MojoShaderHlslProfile) },
+            { Glsl, typeof(MojoShaderGlslProfile) },
+            { Glsl120, typeof(MojoShaderGlsl120Profile) },
+            { Glsl400, typeof(MojoShaderGlsl400Profile) },
+            { GlslEs, typeof(MojoShaderGlslEsProfile) },
+            { Arb1, typeof(MojoShaderArb1Profile) },
+            { Nv2, typeof(MojoShaderArb1Nv2Profile) },
+            { Nv3, typeof(MojoShaderArb1Nv3Profile) },
+            { Nv4, typeof(MojoShaderArb1Nv4Profile) },
+            { Metal, typeof(MojoShaderMetalProfile) },
+            { SpirV, typeof(MojoShaderSpirVProfile) },
+            { GlSpirV, typeof(MojoShaderGlSpirVProfile) }
         };
-    
+
     /// <summary>
     /// [find_profile_id; mojoshader.c]
     /// </summary>

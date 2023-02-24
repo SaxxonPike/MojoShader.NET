@@ -17,11 +17,11 @@ public class MojoShader : IMojoShader
 
         // Try and find which profile class corresponds to the profile string.
         if (MojoShaderProfiles.Find(profileStr) is not { } mappedProfileString ||
-            !MojoShaderProfiles.All.TryGetValue(mappedProfileString, out var profileTypes))
+            !MojoShaderProfiles.All.TryGetValue(mappedProfileString, out var profileType))
             return null;
 
         // Reflection magic to create the profile.
-        if (Activator.CreateInstance(profileTypes.Item1) is not IMojoShaderProfile profile)
+        if (Activator.CreateInstance(profileType) is not IMojoShaderProfile profile)
             return null;
 
         var swizzles = options?.Swiz.ToList() ?? new List<MojoShaderSwizzle>();
@@ -112,5 +112,5 @@ public class MojoShader : IMojoShader
         throw new NotImplementedException();
     }
 
-    public TextWriter Log { get; set; }
+    public TextWriter? Log { get; set; }
 }
